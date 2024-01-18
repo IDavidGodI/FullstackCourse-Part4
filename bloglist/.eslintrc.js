@@ -15,7 +15,7 @@ module.exports = {
     "eqeqeq": "warn",
     "no-trailing-spaces": "warn",
     "object-curly-spacing": [
-      "error", "always"
+      "warn", "always"
     ],
     "space-infix-ops": ["warn"],
     "arrow-spacing": [
