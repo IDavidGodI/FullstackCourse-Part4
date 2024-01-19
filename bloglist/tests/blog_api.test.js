@@ -34,6 +34,13 @@ test("Specific blog is contained",async () => {
   expect(response.body[1].url).toEqual(helper.initialBlogs[1].url)
 })
 
+test("The unique identifier is 'id' property", async () => {
+  const response = await api.get(blogsUrl)
+
+  response.body.forEach(blog => expect(blog.id).toBeDefined())
+
+})
+
 afterAll(async () => {
   await mongoose.connection.close();
 })
