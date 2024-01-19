@@ -19,7 +19,7 @@ module.exports = {
     ],
     "space-infix-ops": ["warn"],
     "arrow-spacing": [
-      "error", { "before": true, "after": true }
+      "warn", { "before": true, "after": true }
     ],
     "indent": [
       "error",
