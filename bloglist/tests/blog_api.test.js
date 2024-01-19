@@ -10,13 +10,13 @@ const blogsUrl = "/api/blogs";
 
 
 beforeAll(async () => {
-  Blog.deleteMany([]);
+  await Blog.deleteMany({});
 
-  let blogObject = new Blog(helper.initialBlogs[0])
-  await blogObject.save();
+  for (let blog of helper.initialBlogs){
+    const blogObject = new Blog(blog)
+    await blogObject.save()
+  }
 
-  blogObject = new Blog(helper.initialBlogs[1])
-  await blogObject.save();
 })
 
 test("Blogs are returned as json", async () => {
@@ -28,16 +28,46 @@ test("Blogs are returned as json", async () => {
 
 test("Specific blog is contained",async () => {
   const response = await api.get(blogsUrl)
-  expect(response.body[1].author).toEqual(helper.initialBlogs[1].author)
-  expect(response.body[1].likes).toEqual(helper.initialBlogs[1].likes)
-  expect(response.body[1].title).toEqual(helper.initialBlogs[1].title)
-  expect(response.body[1].url).toEqual(helper.initialBlogs[1].url)
+
+  response.body.forEach((blog, i) => {
+    expect(blog.author).toEqual(helper.initialBlogs[i].author)
+    expect(blog.likes).toEqual(helper.initialBlogs[i].likes)
+    expect(blog.title).toEqual(helper.initialBlogs[i].title)
+    expect(blog.url).toEqual(helper.initialBlogs[i].url)
+  })
 })
 
 test("The unique identifier is 'id' property", async () => {
   const response = await api.get(blogsUrl)
 
   response.body.forEach(blog => expect(blog.id).toBeDefined())
+
+})
+
+test("Posting a new blog increases the array length", async () => {
+  const newBlog = {
+    title: "Total invent",
+    author: "me",
+    url: "invent.com",
+    likes: 0
+  }
+
+  const postedBlog = await api
+    .post(blogsUrl)
+    .send(newBlog)
+    .expect(201)
+    .expect("Content-Type", /application\/json/)
+
+  const blogs = await api.get(blogsUrl)
+
+  console.log(postedBlog.body)
+  expect(blogs.body.length)
+    .toBe(helper.initialBlogs.length + 1)
+
+  expect(postedBlog.body.author).toEqual(newBlog.author)
+  expect(postedBlog.body.likes).toEqual(newBlog.likes)
+  expect(postedBlog.body.title).toEqual(newBlog.title)
+  expect(postedBlog.body.url).toEqual(newBlog.url)
 
 })
 
