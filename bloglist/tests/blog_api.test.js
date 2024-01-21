@@ -59,8 +59,6 @@ test("Posting a new blog increases the array length", async () => {
     .expect("Content-Type", /application\/json/)
 
   const blogs = await api.get(blogsUrl)
-
-  console.log(postedBlog.body)
   expect(blogs.body.length)
     .toBe(helper.initialBlogs.length + 1)
 
@@ -70,6 +68,51 @@ test("Posting a new blog increases the array length", async () => {
   expect(postedBlog.body.url).toEqual(newBlog.url)
 
 })
+
+describe("Handling missing properties", () => {
+  test("likes default value is 0", async () => {
+    const newBlog = {
+      title: "Total invent",
+      author: "me",
+      url: "invent.com",
+    }
+
+    const postedBlog = await api
+      .post(blogsUrl)
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/)
+
+    expect(postedBlog.body.likes).toBeDefined()
+    expect(postedBlog.body.likes).toBe(0)
+  })
+
+  test("title missing", async () => {
+    const newBlog = {
+      author: "me",
+      url: "invent.com",
+    }
+
+    await api
+      .post(blogsUrl)
+      .send(newBlog)
+      .expect(400)
+  })
+
+  test("url missing", async () => {
+    const newBlog = {
+      title: "a",
+      author: "me",
+    }
+
+    await api
+      .post(blogsUrl)
+      .send(newBlog)
+      .expect(400)
+  })
+})
+
+
 
 afterAll(async () => {
   await mongoose.connection.close();

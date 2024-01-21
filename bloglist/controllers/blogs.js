@@ -6,7 +6,18 @@ blogsRouter.get("/", async (request, response) => {
   response.json(blogs)
 })
 
-blogsRouter.post("/", async (request, response) => {
+blogsRouter.post("/", async (request, response, next) => {
+
+  if (!request.body.likes){
+    request.body.likes = 0;
+  }
+
+
+  if (!request.body.title || !request.body.url){
+    console.log("error", request.body)
+    return response.status(400).end()
+  }
+
   const blog = new Blog(request.body)
 
   await blog
