@@ -3,7 +3,7 @@ const supertest = require("supertest")
 const app = require("../app")
 const Blog = require("../models/blog");
 const { head } = require("lodash");
-const helper = require("../utils/test_helper")
+const helper = require("./test_helper")
 const api = supertest(app)
 
 const blogsUrl = "/api/blogs";

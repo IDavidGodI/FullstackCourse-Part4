@@ -14,6 +14,10 @@ const blogSchema = new mongoose.Schema({
     type: Number,
     min: [0, "Send a valid likes number"],
     default: 0
+  },
+  user:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
   }
 })
 
