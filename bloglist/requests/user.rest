@@ -6,3 +6,6 @@ Content-Type: application/json
   "name": "Test",
   "password": "test password"
 }
+
+###
+GET http://localhost:3003/users

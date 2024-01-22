@@ -53,6 +53,10 @@ const nonExistingId = async () => {
   return blog._id.toString()
 }
 
+const clearBlogs = async () => {
+  await Blog.deleteMany({})
+}
+
 const blogsInDb = async () => {
   const blogs = await Blog.find({})
   return blogs.map(blog => blog.toJSON())
@@ -60,11 +64,10 @@ const blogsInDb = async () => {
 
 const usersInDb = async () => {
   const users = await User.find({})
-  console.log(users)
   return users.map(blog => blog.toJSON())
 }
 
 module.exports = {
-  initialBlogs, nonExistingId, blogsInDb
+  initialBlogs, nonExistingId, blogsInDb, usersInDb, clearBlogs
 }
 
