@@ -2,20 +2,45 @@ const mongoose = require("mongoose");
 const supertest = require("supertest")
 const app = require("../app")
 const Blog = require("../models/blog");
-const { head } = require("lodash");
+const { head, last } = require("lodash");
 const helper = require("./test_helper")
 const api = supertest(app)
 
-const blogsUrl = "/api/blogs";
 
+let token = null
 
 beforeAll(async () => {
-  await Blog.deleteMany({});
+  await helper.clearBlogs();
+  await helper.clearUsers();
 
   for (let blog of helper.initialBlogs){
     const blogObject = new Blog(blog)
     await blogObject.save()
   }
+
+  const user = {
+    userName: "TestUser",
+    name: "Tester",
+    password: "deletingblog"
+  }
+
+  await api
+    .post(helper.URLs.usersUrl)
+    .send(user)
+
+
+  const loginInfo = {
+    userName: "TestUser",
+    password: "Tester"
+  }
+
+
+  const { body: tokenPayload } = await api
+    .post(helper.URLs.loginUrl)
+    .send(loginInfo)
+
+
+  token = `Bearer ${tokenPayload.token}`;
 
 })
 
@@ -23,13 +48,14 @@ describe("The data is received appropriately from the database and the backend",
 
   test("Blogs are returned as json", async () => {
     await api
-      .get(blogsUrl)
+      .get(helper.URLs.blogsUrl)
       .expect(200)
       .expect("Content-Type", /application\/json/)
   })
 
   test("Specific blog is contained",async () => {
     const response = await helper.blogsInDb();
+    console.log(response)
 
     response.forEach((blog, i) => {
       expect(blog.author).toEqual(helper.initialBlogs[i].author)
@@ -43,6 +69,7 @@ describe("The data is received appropriately from the database and the backend",
 
 describe("Data is sent correctly to the database", () => {
   test("Posting a new blog increases the array length", async () => {
+    const initialBlogsLength = (await helper.blogsInDb()).length;
     const newBlog = {
       title: "Total invent",
       author: "me",
@@ -51,14 +78,15 @@ describe("Data is sent correctly to the database", () => {
     }
 
     const postedBlog = await api
-      .post(blogsUrl)
+      .post(helper.URLs.blogsUrl)
       .send(newBlog)
+      .set("Authorization", token)
       .expect(201)
       .expect("Content-Type", /application\/json/)
 
     const blogs = await helper.blogsInDb();
     expect(blogs)
-      .toHaveLength(helper.initialBlogs.length + 1)
+      .toHaveLength(initialBlogsLength + 1)
 
     expect(postedBlog.body.author).toEqual(newBlog.author)
     expect(postedBlog.body.likes).toEqual(newBlog.likes)
@@ -85,8 +113,9 @@ describe("Handling missing properties", () => {
     }
 
     const postedBlog = await api
-      .post(blogsUrl)
+      .post(helper.URLs.blogsUrl)
       .send(newBlog)
+      .set("Authorization", token)
       .expect(201)
       .expect("Content-Type", /application\/json/)
 
@@ -101,8 +130,9 @@ describe("Handling missing properties", () => {
     }
 
     await api
-      .post(blogsUrl)
+      .post(helper.URLs.blogsUrl)
       .send(newBlog)
+      .set("Authorization", token)
       .expect(400)
   })
 
@@ -113,8 +143,9 @@ describe("Handling missing properties", () => {
     }
 
     await api
-      .post(blogsUrl)
+      .post(helper.URLs.blogsUrl)
       .send(newBlog)
+      .set("Authorization", token)
       .expect(400)
   })
 })
@@ -122,11 +153,10 @@ describe("Handling missing properties", () => {
 describe("Deleting a blog", () => {
   test("Deleting a blog by its 'id'", async () => {
     const blogs = await helper.blogsInDb();
-    const blog = head(blogs)
-
-    await api.delete(`${blogsUrl}/${blog.id}`)
+    const blog = last(blogs)
+    await api.delete(`${helper.URLs.blogsUrl}/${blog.id}`)
+      .set("Authorization", token)
       .expect(204)
-
     const currentBlogs = await helper.blogsInDb();
 
     expect(currentBlogs).toHaveLength(blogs.length - 1)
@@ -150,7 +180,7 @@ describe("Updating the info of an specific blog", () => {
     const blog = head(blogs)
 
 
-    const updatedblog = await api.put(`${blogsUrl}/${blog.id}`)
+    const updatedblog = await api.put(`${helper.URLs.blogsUrl}/${blog.id}`)
       .send(update)
       .expect(200)
 
@@ -170,7 +200,7 @@ describe("Updating the info of an specific blog", () => {
     const blogs = await helper.blogsInDb();
     const blog = head(blogs)
 
-    const updatedblog = await api.put(`${blogsUrl}/${blog.id}`)
+    const updatedblog = await api.put(`${helper.URLs.blogsUrl}/${blog.id}`)
       .send(update)
       .expect(200)
 

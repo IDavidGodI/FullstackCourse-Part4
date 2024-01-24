@@ -2,29 +2,26 @@ const mongoose = require("mongoose");
 const supertest = require("supertest")
 const helper = require("./test_helper")
 const app = require("../app")
-const User = require("../models/user")
 const { head } = require("lodash")
 
 const api = supertest(app)
 
-const usersUrl = "/users"
-const blogsUrl = "/api/blogs"
-const loginUrl = "/api/login"
+
 
 beforeAll(async () => {
   await helper.clearBlogs()
-  await User.deleteMany({})
+  await helper.clearUsers()
 })
 
 test("User is created correctly", async () => {
   const user = {
-    userName: "Antonio15",
-    name: "Antonio",
+    userName: "toRepeat",
+    name: "My user name wont be repeated",
     password: "SuperSecret123"
   }
 
   const createdUser = await api
-    .post(usersUrl)
+    .post(helper.URLs.usersUrl)
     .send(user)
     .expect(201)
     .expect("Content-Type", /application\/json/)
@@ -34,108 +31,147 @@ test("User is created correctly", async () => {
 
 })
 
-test("User is created correctly", async () => {
+test("A username cant be repeated", async () => {
   const user = {
     userName: "toRepeat",
-    name: "R",
+    name: "I will repeat the user name >:)",
     password: "SuperSecret123"
   }
 
-  await api
-    .post(usersUrl)
-    .send(user)
-    .expect(201)
-
   const { body: error } = await api
-    .post(usersUrl)
+    .post(helper.URLs.usersUrl)
     .send(user)
     .expect(400)
 
-  console.log("Error", error.body)
+  console.log("Error", error)
 
 })
 
 test("If password or username are invalid there's a 400 status code", async () => {
-//   const user = {
-//     userName: "Ala1234",
-//     name: "Antonio",
-//     password: "Se"
-//   }
-
-  //   await api
-  //     .post(usersUrl)
-  //     .send(user)
-  //     .expect(400)
-  //     .expect("Content-Type", /application\/json/)
-
-  // })
-
-  // test("Adding a blog with an user id", async () => {
-
-  //   const users = await helper.usersInDb()
-
-  //   const testUser = head(users)
-
-  //   const newBlog = {
-  //     title: "Total invent",
-  //     author: "me",
-  //     url: "invent.com",
-  //     likes: 10,
-  //     userId: testUser.id
-  //   }
-
-  //   const createdBlog = await api
-  //     .post(blogsUrl)
-  //     .send(newBlog)
-  //     .expect(201)
-
-  //   console.log(createdBlog.body)
-
-  //   const blog = await api
-  //     .get(`${blogsUrl}/${createdBlog.body.id}`)
-
-  //   expect(blog.body.user.userName).toBe(testUser.userName)
-
-  // })
-
-
-  // test.only("The server send a token when login is correct", async () => {
-  //   const user = {
-  //     userName: "Ala1234",
-  //     name: "Antonio",
-  //     password: "Password"
-  //   }
-
-  //   await api
-  //     .post(usersUrl)
-  //     .send(user)
-
-  //   const loginInfo = {
-  //     userName: "Ala1234",
-  //     password: "Password"
-  //   }
-
-
-  //   const { body: tokenPayload } = await api
-  //     .post(loginUrl)
-  //     .send(loginInfo)
-  //     .expect(200)
-  //     .expect("Content-Type", /application\/json/)
-
-  const newBlog = {
-    title: "Total invent",
-    author: "me",
-    url: "invent.com",
-    likes: 10
+  const user = {
+    userName: "Error",
+    name: "Invalid Data Provider",
+    password: "No"
   }
 
-  await api.post(blogsUrl)
-    // .set("Authorization", `Bearer ${tokenPayload.token}`)
-    .send(newBlog)
-    .expect(201)
+  await api
+    .post(helper.URLs.usersUrl)
+    .send(user)
+    .expect(400)
     .expect("Content-Type", /application\/json/)
 
+})
 
+
+describe("A registered user with a valid token can use the api without problems", () => {
+
+  test("A registerd user can login and get a token", async () => {
+    const user = {
+      userName: "BlogCreator",
+      name: "Im the Creator of the blog",
+      password: "CreatBlogs"
+    }
+
+    await api
+      .post(helper.URLs.usersUrl)
+      .send(user)
+
+    const loginInfo = {
+      userName: "BlogCreator",
+      password: "CreatBlogs"
+    }
+
+
+    await api
+      .post(helper.URLs.loginUrl)
+      .send(loginInfo)
+      .expect(200)
+      .expect("Content-Type", /application\/json/)
+  })
+
+  test("A logged in user can post a blog", async () => {
+    const loginInfo = {
+      userName: "BlogCreator",
+      password: "CreatBlogs"
+    }
+
+
+    const { body: tokenPayload } = await api
+      .post(helper.URLs.loginUrl)
+      .send(loginInfo)
+
+    const newBlog = {
+      title: "My created blog",
+      author: "BlogCreator",
+      url: "creation.com",
+      likes: 9
+    }
+
+    await api.post(helper.URLs.blogsUrl)
+      .set("Authorization", `Bearer ${tokenPayload.token}`)
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/)
+  })
+
+  test("A logged in user can delete a blog only if it belongs to him", async () => {
+    const user = {
+      userName: "notOwner",
+      name: "Im not the owner of the blog",
+      password: "deletingblog"
+    }
+
+    await api
+      .post(helper.URLs.usersUrl)
+      .send(user)
+
+
+    const loginInfo = {
+      userName: "notOwner",
+      password: "deletingblog"
+    }
+
+
+    const { body: tokenPayload } = await api
+      .post(helper.URLs.loginUrl)
+      .send(loginInfo)
+
+    const { id: blogId } = head(await helper.blogsInDb())
+
+    const { body: error } = await api
+      .delete(`${helper.URLs.blogsUrl}/${blogId}`)
+      .set("Authorization", `Bearer ${tokenPayload.token}`)
+      .expect(401)
+
+    console.log(error.error)
+
+    expect(error.error).toBe("A blog can only be deleted by its creator")
+
+  })
+
+  test("The creator of the blog can delete it", async () => {
+    const loginInfo = {
+      userName: "BlogCreator",
+      password: "CreatBlogs"
+    }
+
+
+    const { body: tokenPayload } = await api
+      .post(helper.URLs.loginUrl)
+      .send(loginInfo)
+
+    const initialBlogs = await helper.blogsInDb()
+    const { id: blogId } = head(initialBlogs)
+    await api
+      .delete(`${helper.URLs.blogsUrl}/${blogId}`)
+      .set("Authorization", `Bearer ${tokenPayload.token}`)
+      .expect(204)
+
+    const finalBlogs = await helper.blogsInDb()
+
+    expect(finalBlogs).not.toContainEqual(head(initialBlogs))
+    expect(finalBlogs).toHaveLength(initialBlogs.length - 1)
+  })
 })
 
 

@@ -1,6 +1,12 @@
 const Blog = require("../models/blog")
 const User = require("../models/user")
 
+const URLs = {
+  usersUrl : "/users",
+  blogsUrl : "/api/blogs",
+  loginUrl : "/api/login"
+}
+
 const initialBlogs = [
   {
     title: "React patterns",
@@ -57,6 +63,10 @@ const clearBlogs = async () => {
   await Blog.deleteMany({})
 }
 
+const clearUsers = async () => {
+  await User.deleteMany({})
+}
+
 const blogsInDb = async () => {
   const blogs = await Blog.find({})
   return blogs.map(blog => blog.toJSON())
@@ -68,6 +78,6 @@ const usersInDb = async () => {
 }
 
 module.exports = {
-  initialBlogs, nonExistingId, blogsInDb, usersInDb, clearBlogs
+  initialBlogs, nonExistingId, blogsInDb, usersInDb, clearBlogs, clearUsers, URLs
 }
 
